@@ -8,5 +8,5 @@ How to:
 * In the "Mirror" panel on to the right of the main Godot viewport, press "Deploy"
 * Once your game has uploaded, open the provided link on your phone
 
-If you'd like, you can install the Playbyte App from the iOS App Store to for a more native experience. You can also subscribe to push notifications to be notified when a new build goes live.
+If you'd like, you can install the Playbyte App from the iOS App Store for a more native experience. You can also subscribe to push notifications to be notified when a new build goes live.
 (Android coming soon™️).
