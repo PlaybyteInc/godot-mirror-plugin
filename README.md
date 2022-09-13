@@ -1,5 +1,5 @@
 # Playbyte Mirror
-The easiest way to test your Godot game on mobile.
+The easiest way to playtest your Godot game on mobile.
 
 How to:
 * Open Godot
