@@ -126,6 +126,7 @@ func _upload_file_completed(result, response_code, headers, body):
 		is_deploying = false
 		export_time = Time.get_datetime_string_from_system()
 		$url_label.text = "https://playbyte.dev/p/" + get_setting("id")
+		set_build_notification()
 	update_deploy_btn()
 
 # https://gist.github.com/hiulit/772b8784436898fd7f942750ad99e33e
@@ -162,3 +163,18 @@ func update_deploy_btn():
 		$deploy_btn.text = "Uploading file " + str(index) + " of " + str(file_count)
 	else:
 		$deploy_btn.text = "Deploy"
+
+func set_build_notification():
+	if http_request != null:
+		remove_child(http_request)
+
+	http_request = HTTPRequest.new()
+	add_child(http_request)
+	var headers = [
+		"Authorization: " + get_setting("key")
+	]
+
+	var url = "https://playbyte.dev/api/projects/" + get_setting("id") + "/notify"
+	var error = http_request.request_raw(url, headers, true, HTTPClient.METHOD_GET, [])
+	if error != OK:
+		push_error("An error occurred in the HTTP request.")
