@@ -1,0 +1,29 @@
+[gd_scene load_steps=2 format=2]
+
+[ext_resource path="res://addons/pbmirror/MirrorPanel.gd" type="Script" id=1]
+
+[node name="Mirror" type="VBoxContainer"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource( 1 )
+
+[node name="deploy_btn" type="Button" parent="."]
+margin_right = 576.0
+margin_bottom = 20.0
+text = "Deploy"
+
+[node name="status_label" type="Label" parent="."]
+margin_top = 24.0
+margin_right = 576.0
+margin_bottom = 38.0
+text = "Not yet deployed."
+
+[node name="url_label" type="RichTextLabel" parent="."]
+margin_top = 42.0
+margin_right = 576.0
+margin_bottom = 1024.0
+focus_mode = 2
+size_flags_vertical = 3
+selection_enabled = true
+
+[connection signal="pressed" from="deploy_btn" to="." method="_on_deploy_btn_pressed"]
