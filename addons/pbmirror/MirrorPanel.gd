@@ -2,6 +2,7 @@ tool
 extends VBoxContainer
 
 var is_deploying = false
+var is_exporting = false
 var http_request
 var upload_queue = []
 var file_count = 1
@@ -21,9 +22,21 @@ func _on_deploy_btn_pressed():
 	deploy_prepare_project()
 
 func _set_export_path(path):
-	settings["dir"] = path
+	var parts = path.split("/")
+	var index_name = parts[parts.size() - 1]
+	parts.remove(parts.size() - 1)
+	var folder = parts.join("/")
+	var title = index_name.trim_suffix(".html")
+
+	is_exporting = true
+	settings["dir"] = folder
+	settings["title"] = title
 	update_deploy_btn()
 	write_config()
+
+func _export_end():
+	is_exporting = false
+	update_deploy_btn()
 
 func read_config():
 	var file = File.new()
@@ -76,12 +89,13 @@ func init_project():
 
 func upload():
 	var export_path = get_setting("dir")
+	var title = get_setting("title")
 	if export_path.length() == 0:
 		push_error("Cannot upload without an export directory.")
 		is_deploying = false
 		return
 
-	upload_queue = get_all_files(export_path)
+	upload_queue = get_files(export_path, title)
 	file_count = upload_queue.size()
 	if !upload_queue.empty():
 		upload_file(upload_queue.pop_front())
@@ -130,34 +144,30 @@ func _upload_file_completed(result, response_code, headers, body):
 	update_deploy_btn()
 
 # https://gist.github.com/hiulit/772b8784436898fd7f942750ad99e33e
-func get_all_files(path: String, file_ext := "", files := []):
+func get_files(path: String, title := "", files := []):
 	var dir = Directory.new()
 	if dir.open(path) == OK:
 		dir.list_dir_begin(true, true)
 		var file_name = dir.get_next()
 
 		while file_name != "":
-			if dir.current_is_dir():
-				files = get_all_files(dir.get_current_dir().plus_file(file_name), file_ext, files)
-			else:
-				if file_ext and file_name.get_extension() != file_ext:
-					file_name = dir.get_next()
-					continue
+			if (not dir.current_is_dir()) and file_name.begins_with(title):
 				files.append(file_name)
+
 			file_name = dir.get_next()
 	else:
 		push_error("An error occurred when trying to access %s." % path)
 	return files
 
 func update_deploy_btn():
-	if get_setting("dir").length() == 0:
+	if get_setting("dir").length() == 0 or is_exporting:
 		$status_label.text = "Waiting for HTML5 export..."
 	elif export_time != null:
 		$status_label.text = "Deployed at " + export_time
 	else:
 		$status_label.text = ""
 
-	$deploy_btn.disabled = len(get_setting("dir")) == 0 or is_deploying
+	$deploy_btn.disabled = len(get_setting("dir")) == 0 or is_deploying or is_exporting
 	if is_deploying:
 		var index = file_count - upload_queue.size()
 		$deploy_btn.text = "Uploading file " + str(index) + " of " + str(file_count)
