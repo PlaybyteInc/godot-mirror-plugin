@@ -1,4 +1,4 @@
-tool
+@tool
 extends VBoxContainer
 
 var is_deploying = false
@@ -24,8 +24,8 @@ func _on_deploy_btn_pressed():
 func _set_export_path(path):
 	var parts = path.split("/")
 	var index_name = parts[parts.size() - 1]
-	parts.remove(parts.size() - 1)
-	var folder = parts.join("/")
+	parts.remove_at(parts.size() - 1)
+	var folder = "/".join(parts)
 	var title = index_name.trim_suffix(".html")
 
 	is_exporting = true
@@ -33,14 +33,15 @@ func _set_export_path(path):
 	settings["title"] = title
 	update_deploy_btn()
 	write_config()
+	print("set export path to: " + path)
 
 func _export_end():
 	is_exporting = false
 	update_deploy_btn()
 
 func read_config():
-	var file = File.new()
-	if file.open(".playbyte.json", File.READ) != OK:
+	var file = FileAccess.open(".playbyte.json", FileAccess.READ)
+	if file == null:
 		return
 
 	var contents = file.get_as_text()
@@ -48,17 +49,17 @@ func read_config():
 	load_config(contents)
 
 func write_config():
-	var file = File.new()
-	if file.open(".playbyte.json", File.WRITE) != OK:
+	var file = FileAccess.open(".playbyte.json", FileAccess.WRITE)
+	if file == null:
 		return
 
-	var contents = JSON.print(settings)
+	var contents = JSON.stringify(settings)
 	file.store_string(contents)
 	file.close()
 
 func load_config(config):
-	var json = JSON.parse(config)
-	var dict = json.result as Dictionary
+	var json = JSON.parse_string(config)
+	var dict = json as Dictionary
 	for key in dict:
 		settings[key] = dict[key]
 
@@ -80,10 +81,10 @@ func init_project():
 
 	http_request = HTTPRequest.new()
 	add_child(http_request)
-	http_request.connect("request_completed", self, "_init_project_completed")
+	http_request.request_completed.connect(Callable(self,"_init_project_completed"))
 
 	var url = "https://playbyte.dev/api/projects"
-	var error = http_request.request_raw(url, [], true, HTTPClient.METHOD_POST, [])
+	var error = http_request.request_raw(url,[],HTTPClient.METHOD_POST,[])
 	if error != OK:
 		push_error("An error occurred when creating a new project.")
 
@@ -97,7 +98,7 @@ func upload():
 
 	upload_queue = get_files(export_path, title)
 	file_count = upload_queue.size()
-	if !upload_queue.empty():
+	if upload_queue.size() != 0:
 		upload_file(upload_queue.pop_front())
 	update_deploy_btn()
 
@@ -107,13 +108,12 @@ func upload_file(filename):
 
 	http_request = HTTPRequest.new()
 	add_child(http_request)
-	http_request.connect("request_completed", self, "_upload_file_completed")
+	http_request.request_completed.connect(Callable(self, "_upload_file_completed"))
 
 	var path = get_setting("dir") + "/" + filename
-	var file = File.new()
-	file.open(path, File.READ)
+	var file = FileAccess.open(path, FileAccess.READ)
 
-	var content_length = file.get_len()
+	var content_length = file.get_length()
 	var headers = [
 		"content-length: " + str(content_length),
 		"Authorization: " + get_setting("key")
@@ -123,7 +123,7 @@ func upload_file(filename):
 
 	var baseUrl = "https://playbyte.dev/api/projects/" + get_setting("id") + "/"
 	var url = baseUrl + filename
-	var error = http_request.request_raw(url, headers, true, HTTPClient.METHOD_POST, body)
+	var error = http_request.request_raw(url, headers, HTTPClient.METHOD_POST, body)
 	if error != OK:
 		push_error("An error occurred in the HTTP request.")
 
@@ -134,7 +134,7 @@ func _init_project_completed(result, response_code, headers, body):
 	upload()
 
 func _upload_file_completed(result, response_code, headers, body):
-	if !upload_queue.empty():
+	if upload_queue.size() != 0:
 		upload_file(upload_queue.pop_front())
 	else:
 		is_deploying = false
@@ -145,9 +145,9 @@ func _upload_file_completed(result, response_code, headers, body):
 
 # https://gist.github.com/hiulit/772b8784436898fd7f942750ad99e33e
 func get_files(path: String, title := "", files := []):
-	var dir = Directory.new()
-	if dir.open(path) == OK:
-		dir.list_dir_begin(true, true)
+	var dir = DirAccess.open(path)
+	if dir != null:
+		dir.list_dir_begin()
 		var file_name = dir.get_next()
 
 		while file_name != "":
@@ -185,6 +185,6 @@ func set_build_notification():
 	]
 
 	var url = "https://playbyte.dev/api/projects/" + get_setting("id") + "/notify"
-	var error = http_request.request_raw(url, headers, true, HTTPClient.METHOD_GET, [])
+	var error = http_request.request_raw(url, headers, HTTPClient.METHOD_GET, [])
 	if error != OK:
 		push_error("An error occurred in the HTTP request.")
